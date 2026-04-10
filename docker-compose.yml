@@ -1,0 +1,53 @@
+services:
+  postgres-db:
+    image: postgres:18.3-alpine
+    container_name: idp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_pass
+    ports:
+      - "9001:5432"
+    secrets:
+      - pg_pass
+    volumes:
+      - idp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  migrator:
+    build:
+      context: .
+    container_name: idp_migrator
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: npm run db:migrate
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+  idp-app:
+    build:
+      context: .
+    container_name: idp_node_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+    env_file:
+      - .env
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+
+volumes:
+  idp_pgdata:
+
+secrets:
+  pg_pass:
+    file: ./pg_password.txt
