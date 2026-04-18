@@ -105,7 +105,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         findAccount: findAccount
     }
 
-    const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:3000";
+    const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:3000/oidc";
     providerInstance = new Provider(oidcBaseUrl, configuration);
     return providerInstance;
 }

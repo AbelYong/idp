@@ -8,7 +8,6 @@ import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
