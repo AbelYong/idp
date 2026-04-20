@@ -31,5 +31,17 @@ export const relations = defineRelations(schema, (r) => ({
             from: r.RoleClaims.claimId,
             to: r.Claims.id
         })
+    },
+    VerificationCodes: {
+        user: r.one.Users({
+            from: r.VerificationCodes.userId,
+            to: r.Users.id
+        }),
+    },
+    RecoveryCodes: {
+        user: r.one.Users({
+            from: r.RecoveryCodes.userId,
+            to: r.Users.id
+        }),
     }
 }));

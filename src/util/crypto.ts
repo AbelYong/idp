@@ -29,3 +29,12 @@ export function decryptSecret(cipherText: string): string {
     decrypted += decipher.final("utf8");
     return decrypted;
 }
+
+export function generateSecureOTP(length: number = 6): string {
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  
+  const secureNumber = crypto.randomInt(min, max + 1); //Add 1, randomInt excludes upper bound
+  
+  return secureNumber.toString();
+}

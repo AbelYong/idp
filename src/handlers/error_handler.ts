@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import { AppError } from "../util/errors.js";
+import { AppError, RequestError } from "../util/errors.js";
 
 export const globalErrorHandler = (
     err: any,
@@ -14,6 +14,14 @@ export const globalErrorHandler = (
     if (err instanceof AppError) {
         res.status(err.statusCode).json({
             error: err.message
+        });
+        return;
+    }
+
+    if (err instanceof RequestError) {
+        res.status(err.statusCode).json({
+            error: err.message,
+            code: err.code
         });
         return;
     }

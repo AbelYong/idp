@@ -9,3 +9,13 @@ export class AppError extends Error {
         Error.captureStackTrace(this, this.constructor);
     }
 }
+
+export class RequestError extends Error {
+    constructor(public readonly statusCode: number, public readonly message: string, public readonly code: {}) {
+        super(message);
+        this.statusCode = statusCode;
+        this.code = code;
+
+        Error.captureStackTrace(this, this.constructor);
+    }
+}

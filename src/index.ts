@@ -1,9 +1,10 @@
-
 import express, { type Response } from "express";
 import { globalErrorHandler } from "./handlers/error_handler.js";
-import { LoginUserSchema, RegisterUserSchema } from "./schema/auth_schema.js";
+import { EmailVerificationRequestSchema, EmailVerificationSchema, LoginUserSchema, RegisterUserSchema, UserRecoverySchema } from "./schema/auth_schema.js";
 import { asyncHandler } from "./handlers/async_handler.js";
-import { registerUser, login, getInteractionDetails } from "./controllers/auth_controller.js";
+import { login, getInteractionDetails } from "./controllers/auth_controller.js";
+import { registerUser, requestEmailVerification, verifyEmail } from "./controllers/registration_controller.js"
+import { requestUserRecovery, completeUserRecovery } from "./controllers/recovery_controller.js";
 import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
 
@@ -15,11 +16,19 @@ app.get("/api", (res: Response) => {
   res.json({ mensaje: "IdP is listening" });
 });
 
-app.post("/api/auth/register", validateRequest(RegisterUserSchema), asyncHandler(registerUser));
-
 app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
 
 app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
+
+app.post("/api/auth/registration", validateRequest(RegisterUserSchema), asyncHandler(registerUser));
+
+app.post("/api/auth/verification", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestEmailVerification));
+
+app.patch("/api/auth/verification", validateRequest(EmailVerificationSchema), asyncHandler(verifyEmail));
+
+app.post("/api/auth/recovery", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestUserRecovery));
+
+app.patch("/api/auth/recovery", validateRequest(UserRecoverySchema), asyncHandler(completeUserRecovery));
 
 async function startServer() {
     try {

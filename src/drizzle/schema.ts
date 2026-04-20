@@ -6,11 +6,32 @@ export const Users = pgTable(
         id: pg.uuid("id").primaryKey().defaultRandom(),
         email: pg.varchar("email", { length: 128} ).notNull(),
         password_hash: pg.varchar("password_hash").notNull(),
+        isVerified: pg.boolean("is_verified").notNull().default(false),
         isActive: pg.boolean("is_active").notNull().default(false),
         updatedAt: pg.timestamp("updated_at").notNull().defaultNow()
     }, (table) => [
         pg.uniqueIndex("email_unqIdx").on(table.email)
     ]
+);
+
+export const VerificationCodes = pgTable(
+    "verification_codes", {
+        id: pg.uuid("id").primaryKey().defaultRandom(),
+        code: pg.varchar("code", { length: 6 } ).notNull(),
+        remainingAttempts: pg.integer("remaining_attempts").notNull(),
+        expiresAt: pg.timestamp("expires_at").notNull(),
+        userId: pg.uuid("user_id").references(() => Users.id).notNull()        
+    }
+);
+
+export const RecoveryCodes = pgTable(
+    "recovery_codes", {
+        id: pg.uuid("id").primaryKey().defaultRandom(),
+        code: pg.varchar("code", { length: 6 } ),
+        remainingAttempts: pg.integer("remaining_attempts").notNull(),
+        expiresAt: pg.timestamp("expires_at").notNull(),
+        userId: pg.uuid("user_id").references(() => Users.id).notNull()
+    }
 );
 
 export const Roles = pgTable(

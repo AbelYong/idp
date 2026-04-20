@@ -15,6 +15,27 @@ export const RegisterUserSchema = z.object({
 
 export type RegisterUserInput = z.infer<typeof RegisterUserSchema>["body"]
 
+export const EmailVerificationRequestSchema = z.object({
+    body: z.object({
+        email: z.email({ error: "Email has the wrong format" })
+            .max(128, ({ error: "Email is too long" })),
+    })
+});
+
+export type EmailVerificationRequestInput = z.infer<typeof EmailVerificationRequestSchema>["body"]
+
+export const EmailVerificationSchema = z.object({
+    body: z.object({
+        email: z.email({ error: "Email has the wrong format" })
+            .max(128, ({ error: "Email is too long" })),
+        code: z.string()
+            .min(6, { error: "Verification code should be exactly 6 digits long."})
+            .max(6, { error: "Verification code should be exactly 6 digits long."})
+    })
+});
+
+export type EmailVerificationInput = z.infer<typeof EmailVerificationSchema>["body"]
+
 export const LoginUserSchema = z.object({
     body: z.object({
         email: z.email({ error: "Email has the wrong format"}),
@@ -24,3 +45,21 @@ export const LoginUserSchema = z.object({
 });
 
 export type LoginUserInput = z.infer<typeof LoginUserSchema>["body"];
+
+export const UserRecoverySchema = z.object({
+    body: z.object({
+        email: z.email({ error: "Email has the wrong format" })
+            .max(128, { error: "Email is too long" }),
+        password: z.string()
+            .min(8, { error: "Password must have at least eight characters." })
+            .regex(/[A-Z]/, { error: "Password must have at least one uppercase letter." })
+            .regex(/[a-z]/, { error: "Password must have at least one lowercase letter." })
+            .regex(/\d/, { error: "Password must have at least one digit." })
+            .regex(/[^A-Za-z0-9]/, { error: "Password must have at least one symbol." }),
+        code: z.string()
+            .min(6, { error: "Verification code should be exactly 6 digits long."})
+            .max(6, { error: "Verification code should be exactly 6 digits long."})
+    })
+});
+
+export type UserRecoveryInput = z.infer<typeof UserRecoverySchema>["body"];

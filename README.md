@@ -20,6 +20,8 @@ ISSUER_URL=[URL donde esta hosteado el IdP]
 OIDC_JWKS=[JSON Valido]
 DEFAULT_RESOURCE=[Cliente al que otorgar grants automaticos]
 DEFAULT_SCOPES=[scopes, separados por comas]
+IDP_EMAIL_ADDRESS=[direccion de correo para verificacion y recuperacion]
+IDP_EMAIL_PASS=[contraseña del correo]
 ```
 
 Cree un archivo llamado pg_password.txt en la raíz del proyecto, dentro coloque una sola linea con la contraseña de la BD
