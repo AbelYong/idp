@@ -18,6 +18,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - gazella-net
   
   migrator:
     build:
@@ -25,6 +27,8 @@ services:
     container_name: idp_migrator
     environment:
       - DATABASE_URL=${DATABASE_URL}
+    networks:
+      - gazella-net
     command: npm run db:migrate
     depends_on:
       postgres-db:
@@ -38,9 +42,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: development
+      NODE_ENV: deployment
     env_file:
       - .env
+    networks:
+      - gazella-net
     depends_on:
       migrator:
         condition: service_completed_successfully
@@ -51,3 +57,7 @@ volumes:
 secrets:
   pg_pass:
     file: ./pg_password.txt
+
+networks:
+  gazella-net:
+    external: true

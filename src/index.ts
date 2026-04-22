@@ -7,34 +7,31 @@ import { registerUser, requestEmailVerification, verifyEmail } from "./controlle
 import { requestUserRecovery, completeUserRecovery } from "./controllers/recovery_controller.js";
 import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
-
-app.use(express.json());
-
-app.get("/api", (res: Response) => {
-  res.json({ mensaje: "IdP is listening" });
-});
-
-app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
-
-app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
-
-app.post("/api/auth/registration", validateRequest(RegisterUserSchema), asyncHandler(registerUser));
-
-app.post("/api/auth/verification", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestEmailVerification));
-
-app.patch("/api/auth/verification", validateRequest(EmailVerificationSchema), asyncHandler(verifyEmail));
-
-app.post("/api/auth/recovery", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestUserRecovery));
-
-app.patch("/api/auth/recovery", validateRequest(UserRecoverySchema), asyncHandler(completeUserRecovery));
+app.set("trust proxy", 1);
 
 async function startServer() {
     try {
         const provider = await initializeOIDCProvider();
-
         app.use('/oidc', provider.callback());
+
+        app.use(express.json());
+
+        app.get("/api", (res: Response) => {
+            res.json({ mensaje: "IdP is listening" });
+        });
+
+        app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
+        app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
+        app.post("/api/auth/registration", validateRequest(RegisterUserSchema), asyncHandler(registerUser));
+        app.post("/api/auth/verification", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestEmailVerification));
+        app.patch("/api/auth/verification", validateRequest(EmailVerificationSchema), asyncHandler(verifyEmail));
+        app.post("/api/auth/recovery", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestUserRecovery));
+        app.patch("/api/auth/recovery", validateRequest(UserRecoverySchema), asyncHandler(completeUserRecovery));
 
         app.use(globalErrorHandler);
 
