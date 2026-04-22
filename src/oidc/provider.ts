@@ -1,4 +1,4 @@
-import Provider, { ClientMetadata, Configuration, JWKS } from "oidc-provider"
+import Provider, { ClientMetadata, Configuration, JWKS, interactionPolicy } from "oidc-provider"
 import { DrizzleAdapter } from "./drizzle_adapter.js"
 import { findAccount, loadExistingGrant } from "./provider_configuration.js"
 import { db } from "../drizzle/db.js"
@@ -22,7 +22,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
 
     const mappedClients: ClientMetadata[] = dbClients.map(c => {
         let plainSecret = undefined;
-        if (c.clientSecret) {
+        if (c.clientSecret && c.clientSecret.length > 0) {
             try {
                 plainSecret = decryptSecret(c.clientSecret);
             } catch (err) {
@@ -31,6 +31,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         }
 
         return {
+            application_type: "native",
             client_id: c.clientName,
             client_secret: plainSecret,
             token_endpoint_auth_method: plainSecret ? "client_secret_basic" : "none",
@@ -39,6 +40,9 @@ export async function initializeOIDCProvider() : Promise<Provider> {
             grant_types: (c.allowedGrants as string[]) || ["authorization_code", "refresh_token"]
         };
     });
+
+    const policy = interactionPolicy.base();
+    policy.get("consent")?.checks.remove("native_client_prompt");
 
     const configuration : Configuration = {
         adapter: DrizzleAdapter,
@@ -53,6 +57,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
             AuthorizationCode: 10 * 60,
         },
         interactions: {
+            policy: policy,
             url(ctx, interaction) {
                 const interactionId = interaction.jti;
                 return `/api/auth/interaction/${interactionId}`;
@@ -105,7 +110,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         findAccount: findAccount
     }
 
-    const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:3000/oidc";
+    const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:4000/oidc";
     providerInstance = new Provider(oidcBaseUrl, configuration);
     return providerInstance;
 }
