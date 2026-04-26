@@ -53,11 +53,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         throw new AppError(401, "Email or password are incorrect");
     }
 
+    const accountId = user.id;
+    const interaction = await provider.interactionDetails(req, res);
+    const params = interaction.params;
+
+    const grant = new provider.Grant({
+        clientId: params.client_id as string,
+        accountId: accountId,
+    });
+
+    const requestedScopes = (params.scope as string) || "openid";
+    const requestedResource = params.resource || process.env.DEFAULT_RESOURCE;
+
+    // Otorgamos TODOS los scopes a OIDC (para callar al prompt)
+    grant.addOIDCScope(requestedScopes);
+
+    // Otorgamos TODOS los scopes a tu Recurso (para que nazca el JWT)
+    if (requestedResource) {
+        const resources = Array.isArray(requestedResource) ? requestedResource : [requestedResource as string];
+        for (const res of resources) {
+            grant.addResourceScope(res, requestedScopes);
+        }
+    }
+
+    const grantId = await grant.save();
+
+    // 3. ENVIAMOS EL COMBO COMPLETO: Login + Consentimiento auto-aprobado
     const result = {
-        login: {
-            accountId: user.id
+        login: { accountId: accountId },
+        consent: {
+            grantId: grantId, // Le pasamos el ID del Grant que acabamos de crear
         }
     };
 
+    // Al enviar 'consent', el proveedor se saltará la pantalla por completo
     await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
 }

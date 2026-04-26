@@ -6,11 +6,13 @@ import { EmailVerificationInput, EmailVerificationRequestInput, RegisterUserInpu
 import { IEmailManager, EmailManager } from "../util/mail.js"
 import { AppError, RequestError } from "../util/errors.js"
 import { eq } from "drizzle-orm"
+import { publishUserRegisteredEvent } from "../messaging/publisher.js"
+import { UserRegisteredMsg } from "../messaging/messages.js"
 
 const emailProvider: IEmailManager = new EmailManager(false);
 
 export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res: Response): Promise<void> => {
-    const { email, password } = req.body;
+    const { email, password, name, parentalSurname, maternalSurname } = req.body;
 
     if (await verifyIsEmailInUse(email)) {
         throw new AppError(409, "This email is already in use");
@@ -33,7 +35,16 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         email: Users.email
     });
 
-    res.status(201).json({message: "User registration successful", user: newUser});
+    const wasEmailSent =  await emailProvider.sendVerificationCode(email);
+
+    if (wasEmailSent) {
+        res.status(201).json({message: "User registration successful", user: newUser});
+
+        const message = new UserRegisteredMsg(email, name, parentalSurname, maternalSurname, newUser.id);
+        publishUserRegisteredEvent(message);
+    } else {
+        res.status(503).json({message: "We received your request but failed to send you an email, try again later", code: "EMAIL_NOT_SENT"});
+    }
 }
 
 async function verifyIsEmailInUse(email: string) : Promise<boolean> {
@@ -52,7 +63,7 @@ export const requestEmailVerification = async (req: Request<{}, {}, EmailVerific
     if (success) {
         res.status(201).json({message: "Your verification email has been sent"});
     } else {
-        res.status(503).json({message: "We received your request but failed to send you an email, try again later"})
+        res.status(503).json({message: "We received your request but failed to send you an email, try again later"});
     }
 }
 

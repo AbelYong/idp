@@ -1,13 +1,14 @@
 import Provider, { ClientMetadata, Configuration, JWKS, interactionPolicy } from "oidc-provider"
 import { DrizzleAdapter } from "./drizzle_adapter.js"
-import { findAccount, loadExistingGrant } from "./provider_configuration.js"
+import { findAccount, jwt, loadExistingGrant } from "./provider_configuration.js"
 import { db } from "../drizzle/db.js"
 import { decryptSecret } from "../util/crypto.js"
 
 const defaultResource = process.env.DEFAULT_RESOURCE || "";
 const defaultScopes: string = process.env.DEFAULT_SCOPES || "";
+const defaultResourceScope = process.env.DEFAULT_RESOURCE_SCOPE || "";
 
-const scopes: string = defaultScopes.split(",").map(val => val.trim()).filter(Boolean).join(" ");
+const scopes: string[] = defaultScopes.split(",").map(item => item.trim());
 
 let providerInstance: Provider;
 
@@ -48,6 +49,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         adapter: DrizzleAdapter,
         clients: mappedClients,
         jwks: jwks,
+        scopes: scopes,
         ttl: {
             Interaction: 60 * 30,
             Grant: 7 * 24 * 60 * 60,
@@ -58,7 +60,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         },
         interactions: {
             policy: policy,
-            url(ctx, interaction) {
+            url(_ctx, interaction) {
                 const interactionId = interaction.jti;
                 return `/api/auth/interaction/${interactionId}`;
             },
@@ -68,12 +70,16 @@ export async function initializeOIDCProvider() : Promise<Provider> {
             devInteractions: { enabled: false },
             resourceIndicators: {
                 enabled: true,
-                defaultResource(ctx, client) {
+                useGrantedResource(_ctx, _model) {
+                    return true;
+                },
+                defaultResource(_ctx, _client) {
                     return defaultResource; 
                 },
-                getResourceServerInfo(ctx, resource, client) {
+                getResourceServerInfo(_ctx, resource, _client) {
                     return {
-                        scope: scopes,
+                        scope: defaultResourceScope,
+                        accessTokenFormat: "jwt",
                         audience: resource,
                         jwt: {
                             sign: { alg: 'RS256' },
@@ -84,21 +90,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         },
         formats: {
             customizers: {
-                async jwt(ctx, token, parts) {
-                    if ("accountId" in token && token.accountId) {
-                        
-                        const account = await findAccount(ctx, token.accountId, token);
-                        if (account != undefined) {
-                            const claims = await account.claims("access_token", token.scope || '', {}, []);
-
-                            parts.payload.email = claims.email;
-                            parts.payload.roles = claims.roles;
-                            parts.payload.permissions = claims.permissions;
-                        }
-                    }
-                    
-                    return parts;
-                }
+                jwt: jwt
             }
         },
         loadExistingGrant: loadExistingGrant,

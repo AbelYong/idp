@@ -7,6 +7,7 @@ import { registerUser, requestEmailVerification, verifyEmail } from "./controlle
 import { requestUserRecovery, completeUserRecovery } from "./controllers/recovery_controller.js";
 import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
+import { rabbitMQService } from "./messaging/rabbitmq.js";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -33,6 +34,8 @@ async function startServer() {
         app.post("/api/auth/recovery", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestUserRecovery));
         app.patch("/api/auth/recovery", validateRequest(UserRecoverySchema), asyncHandler(completeUserRecovery));
 
+        await rabbitMQService.connect();
+
         app.use(globalErrorHandler);
 
         const PORT = process.env.PORT || 3000;
@@ -45,5 +48,10 @@ async function startServer() {
         process.exit(1);
     }
 }
+
+process.on("SIGINT", async() => {
+    await rabbitMQService.close();
+    process.exit(0);
+});
 
 await startServer();

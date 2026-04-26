@@ -1,7 +1,8 @@
-import { FindAccount, Configuration } from "oidc-provider"
+import { FindAccount, Configuration, JWTStructured, KoaContextWithOIDC, AccessToken, ClientCredentials } from "oidc-provider"
 import { db } from "../drizzle/db.js"
 
 const defaultResource: string = process.env.DEFAULT_RESOURCE || "";
+const defaultOidcScopes: string = process.env.OIDC_SCOPES || ""
 
 export const loadExistingGrant: Configuration["loadExistingGrant"] = async (ctx) => {
     const grantId = (ctx.oidc.result?.consent?.grantId) || ctx.oidc.entities.Interaction?.grantId;
@@ -9,57 +10,13 @@ export const loadExistingGrant: Configuration["loadExistingGrant"] = async (ctx)
         return ctx.oidc.provider.Grant.find(grantId);
     }
 
-    const accountId = ctx.oidc.session?.accountId;
-    const clientId = ctx.oidc.client?.clientId;
-
-    if (!clientId || !accountId) {
-        return undefined;
-    }
-
-    const client = await db.query.Clients.findFirst({
-        where: { clientName: clientId }
-    });
-
-    if (client?.isPrivate) { 
-        const grant = new ctx.oidc.provider.Grant({
-            clientId: clientId,
-            accountId: accountId,
-        });
-
-        const params = ctx.oidc.params || ctx.oidc.entities.Interaction?.params || {};
-            
-        const requestedScopes = (params.scope as string) || "openid";
-        const scopesArray = requestedScopes.split(' ');
-            
-        for (const scope of scopesArray) {
-            grant.addOIDCScope(scope);
-        }
-
-        const requestedResource = params.resource;
-            
-        if (requestedResource) {
-            const resources = Array.isArray(requestedResource) 
-                ? requestedResource 
-                : [requestedResource as string];
-                    
-            for (const res of resources) {
-                grant.addResourceScope(res, requestedScopes);
-            }
-        } else if (defaultResource) {
-            grant.addResourceScope(defaultResource, requestedScopes);
-        }
-
-        await grant.save();
-        return grant;
-    }
-
     return undefined; 
 };
 
-export const findAccount: FindAccount = async (ctx, id) => {
+export const findAccount: FindAccount = async (_ctx : KoaContextWithOIDC, id: string) => {
     return {
         accountId: id,
-        async claims(use, scope, claims, rejected) {
+        async claims(_use, _scope, _claims, _rejected) {
             const user = await db.query.Users.findFirst({
                 where: {
                     id: id
@@ -107,3 +64,26 @@ export const findAccount: FindAccount = async (ctx, id) => {
         }
     }
 };
+
+export const jwt = async (ctx: KoaContextWithOIDC, token: AccessToken | ClientCredentials, parts: JWTStructured) => {
+    if (token.kind === 'AccessToken') {
+        if (!token.accountId) {
+            return parts;
+        }
+        const account = await findAccount(ctx, token.accountId, token);
+        if (!account) {
+            return parts;
+        }
+        const claims = await account.claims("access_token", token.scope || '', {}, []);
+        if (claims.email) {
+            parts.payload.email = claims.email;
+        }
+        if (claims.roles) {
+            parts.payload.roles = claims.roles;
+        }
+        if (claims.permissions) {
+            parts.payload.permissions = claims.permissions;
+        }
+    }
+    return parts;
+}

@@ -9,7 +9,26 @@ export const RegisterUserSchema = z.object({
             .regex(/[A-Z]/, { error: "Password must have at least one uppercase letter." })
             .regex(/[a-z]/, { error: "Password must have at least one lowercase letter." })
             .regex(/\d/, { error: "Password must have at least one digit." })
-            .regex(/[^A-Za-z0-9]/, { error: "Password must have at least one symbol." })
+            .regex(/[^A-Za-z0-9]/, { error: "Password must have at least one symbol." }),
+        name: z.string()
+            .trim()
+            .min(2, { error: "Name cannot be empty or be only blank space" })
+            .max(32,{ error: "Name cannot be longer than 32 characters"})
+            .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+(?: [a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$/, { 
+                error: "Numbers, symbols and contiguous blank spaces are not allowed" 
+            }),
+        parentalSurname: z.string()
+            .trim()
+            .max(32,{ error: "Parental surname cannot be longer than 32 characters"})
+            .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+(?: [a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$|^$/, { 
+                error: "Numbers, symbols and contiguous blank spaces are not allowed" 
+            }),
+        maternalSurname: z.string()
+            .trim()
+            .max(32,{ error: "Maternal surname cannot be longer than 32 characters"})
+            .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+(?: [a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$|^$/, { 
+                error: "Numbers, symbols and contiguous blank spaces are not allowed" 
+            }),
     })
 });
 
