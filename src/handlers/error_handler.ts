@@ -3,9 +3,9 @@ import { AppError, RequestError } from "../util/errors.js";
 
 export const globalErrorHandler = (
     err: any,
-    req: Request,
+    _req: Request,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
 ): void => {
     if (process.env.NODE_ENV !== 'test') {
         console.error("Error:", err);
@@ -29,7 +29,7 @@ export const globalErrorHandler = (
     if (errorCodes.has(err.code)) {
         res.status(503).json({
             error: "Service unavaible",
-            message: "Database is currently unavaible. Please try again later"
+            message: "A databse or downstream service is currently unavaible. Please try again later"
         });
     }
 

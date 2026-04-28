@@ -4,9 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# npm ci is best practice for deployment, but with npm ci
-# docker compose build fails with an architecture mismatch for esbuild
-RUN npm install --no-save --no-audit --no-fund
+RUN npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -14,6 +12,8 @@ COPY src ./src
 RUN npm run build
 
 FROM node:24-alpine AS runner
+RUN addgroup -S idp \
+    && adduser -S idp -G idp
 
 WORKDIR /app
 
@@ -21,11 +21,13 @@ ENV NODE_ENV=deployment
 
 COPY package.json package-lock.json ./
 
-RUN npm install --omit=dev --no-save --no-audit --no-fund
+RUN npm ci
 
 COPY --from=builder /app/dist ./dist
 
 COPY ./drizzle ./drizzle
+
+USER idp
 
 EXPOSE 3000
 
