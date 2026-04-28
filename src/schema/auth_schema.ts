@@ -22,13 +22,13 @@ export const RegisterUserSchema = z.object({
             .max(32,{ error: "Parental surname cannot be longer than 32 characters"})
             .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+(?: [a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$|^$/, { 
                 error: "Numbers, symbols and contiguous blank spaces are not allowed" 
-            }),
+            }).optional(),
         maternalSurname: z.string()
             .trim()
             .max(32,{ error: "Maternal surname cannot be longer than 32 characters"})
             .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+(?: [a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$|^$/, { 
                 error: "Numbers, symbols and contiguous blank spaces are not allowed" 
-            }),
+            }).optional()
     })
 });
 
