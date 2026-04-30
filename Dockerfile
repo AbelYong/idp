@@ -17,7 +17,7 @@ RUN addgroup -S idp \
 
 WORKDIR /app
 
-ENV NODE_ENV=deployment
+ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
 
