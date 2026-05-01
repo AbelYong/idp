@@ -13,4 +13,5 @@ export function publishUserRegisteredEvent(userData: UserRegisteredMsg) {
     const message  = Buffer.from(JSON.stringify(userData));
 
     channel.publish(ACCOUNT_EXCHANGE, routingKey, message, { persistent: true });
+    console.log(`[EVENT] A user registration event has been published to the MQ: ${message}`);
 };

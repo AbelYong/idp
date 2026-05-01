@@ -1,7 +1,7 @@
 import argon2 from "argon2"
 import { Request, Response } from "express"
 import { db } from "../drizzle/db.js"
-import { Users, VerificationCodes } from "../drizzle/schema.js"
+import { UserRoles, Users, VerificationCodes } from "../drizzle/schema.js"
 import { EmailVerificationInput, EmailVerificationRequestInput, RegisterUserInput } from "../schema/auth_schema.js"
 import { IEmailManager, EmailManager } from "../util/mail.js"
 import { AppError, RequestError } from "../util/errors.js"
@@ -10,6 +10,21 @@ import { publishUserRegisteredEvent } from "../messaging/publisher.js"
 import { UserRegisteredMsg } from "../messaging/messages.js"
 
 const emailProvider: IEmailManager = new EmailManager(false);
+
+const defaultRoleName: string = process.env["DEFAULT_ROLE"] || "undefined";
+let defaultRoleId: string = "undefined";
+
+export async function loadDefaultRole(): Promise<void> {
+    const defaultDbRole = await db.query.Roles.findFirst({
+        where: { name: defaultRoleName }
+    });
+
+    if (defaultDbRole) {
+        defaultRoleId = defaultDbRole.id;
+    } else {
+        console.warn(`No role matching for ${defaultRoleName} was found in the database. Registration may fail`);
+    }
+}
 
 export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res: Response): Promise<void> => {
     const { email, password, name, parentalSurname, maternalSurname } = req.body;
@@ -24,26 +39,42 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         timeCost: 3,
         parallelism: 1
     });
+    
+    const newUser = await db.transaction(async () => {
+        const [newUser] = await db.insert(Users).values({
+            email: email,
+            password_hash: hashedPassword,
+            isActive: true,
+            isVerified: false,
+        }).returning({
+            id: Users.id,
+            email: Users.email,
+            registratedAt: Users.updatedAt
+        });
 
-    const [newUser] = await db.insert(Users).values({
-        email: email,
-        password_hash: hashedPassword,
-        isActive: true,
-        isVerified: false,
-    }).returning({
-        id: Users.id,
-        email: Users.email
+        await db.insert(UserRoles).values({
+            userId: newUser.id,
+            roleId: defaultRoleId
+        });
+        return newUser;
     });
 
     const wasEmailSent =  await emailProvider.sendVerificationCode(email);
-
     if (wasEmailSent) {
-        res.status(201).json({message: "User registration successful", user: newUser});
-
-        const message = new UserRegisteredMsg(email, name, parentalSurname, maternalSurname, newUser.id);
+        res.status(201).json({message: "User registration successful, a verification code has been sent to your inbox", user: newUser});
+        
+        const message = new UserRegisteredMsg(
+            email,
+            name,
+            parentalSurname,
+            maternalSurname,
+            defaultRoleName,
+            newUser.registratedAt,
+            newUser.id
+        );
         publishUserRegisteredEvent(message);
     } else {
-        res.status(503).json({message: "We received your request but failed to send you an email, try again later", code: "EMAIL_NOT_SENT"});
+        res.status(503).json({message: "We managed to registrate you but failed to send you an email, please request one later", code: "EMAIL_NOT_SENT"});
     }
 }
 

@@ -3,7 +3,7 @@ import { globalErrorHandler } from "./handlers/error_handler.js";
 import { EmailVerificationRequestSchema, EmailVerificationSchema, LoginUserSchema, RegisterUserSchema, UserRecoverySchema } from "./schema/auth_schema.js";
 import { asyncHandler } from "./handlers/async_handler.js";
 import { login, getInteractionDetails } from "./controllers/auth_controller.js";
-import { registerUser, requestEmailVerification, verifyEmail } from "./controllers/registration_controller.js"
+import { loadDefaultRole, registerUser, requestEmailVerification, verifyEmail } from "./controllers/registration_controller.js"
 import { requestUserRecovery, completeUserRecovery } from "./controllers/recovery_controller.js";
 import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
@@ -26,6 +26,8 @@ async function startServer() {
         app.get("/api", (res: Response) => {
             res.json({ mensaje: "IdP is listening" });
         });
+
+        await loadDefaultRole();
 
         app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
         app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
