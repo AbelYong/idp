@@ -50,6 +50,11 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         clients: mappedClients,
         jwks: jwks,
         scopes: scopes,
+        cookies: {
+            keys: [process.env.COOKIE_SECRET || 'dev-secret-key'],
+            short: { secure: false }, 
+            long: { secure: false }
+        },
         ttl: {
             Interaction: 60 * 30,
             Grant: 7 * 24 * 60 * 60,
@@ -104,6 +109,9 @@ export async function initializeOIDCProvider() : Promise<Provider> {
 
     const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:4000/oidc";
     providerInstance = new Provider(oidcBaseUrl, configuration);
+    
+    providerInstance.proxy = true;
+
     return providerInstance;
 }
 
