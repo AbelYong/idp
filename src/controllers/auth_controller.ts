@@ -83,7 +83,5 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         }
     };
 
-    //await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
-    const returnTo = await provider.interactionResult(req, res, result, { mergeWithLastSubmission: false });
-    res.status(200).json({ returnTo: returnTo });
+    await provider.interactionFinished(req, res, result, { mergeWithLastSubmission: false });
 }
