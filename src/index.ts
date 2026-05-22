@@ -30,7 +30,7 @@ async function startServer() {
         await loadDefaultRole();
 
         app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
-        app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
+        app.post("/api/auth/interaction/:uid", validateRequest(LoginUserSchema), asyncHandler(login));
         app.post("/api/auth/registration", validateRequest(RegisterUserSchema), asyncHandler(registerUser));
         app.post("/api/auth/verification", validateRequest(EmailVerificationRequestSchema), asyncHandler(requestEmailVerification));
         app.patch("/api/auth/verification", validateRequest(EmailVerificationSchema), asyncHandler(verifyEmail));
