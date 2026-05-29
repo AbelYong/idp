@@ -19,6 +19,11 @@ app.disable("x-powered-by");
 async function startServer() {
     try {
         const provider = await initializeOIDCProvider();
+
+        provider.on('server_error', (_ctx, err) => {
+            console.error('OIDC Server Error:', err);
+        });
+
         app.use('/oidc', provider.callback());
 
         app.use(express.json());
