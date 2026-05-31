@@ -105,7 +105,16 @@ export async function initializeOIDCProvider() : Promise<Provider> {
             email: ["email"],
             account: ["roles", "permissions"]
         },
-        findAccount: findAccount
+        findAccount: findAccount,
+        clientBasedCORS(_ctx, origin, _client) {
+            const allowedOrigins = [
+                "http://localhost:4173",
+                "http://localhost:5173",
+                "http://localhost:4000",
+            ];
+
+            return allowedOrigins.includes(origin);
+        },
     }
 
     const oidcBaseUrl = process.env.ISSUER_URL || "http://localhost:4000/oidc";
