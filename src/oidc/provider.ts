@@ -1,8 +1,9 @@
-import Provider, { ClientMetadata, Configuration, JWKS, interactionPolicy } from "oidc-provider"
+import { Provider, ClientMetadata, Configuration, JWKS, interactionPolicy, KoaContextWithOIDC, Client } from "oidc-provider";
 import { DrizzleAdapter } from "./drizzle_adapter.js"
 import { findAccount, jwt, loadExistingGrant } from "./provider_configuration.js"
 import { db } from "../drizzle/db.js"
 import { decryptSecret } from "../util/crypto.js"
+
 
 const defaultResource = process.env.DEFAULT_RESOURCE || "";
 const defaultScopes: string = process.env.DEFAULT_SCOPES || "";
@@ -75,13 +76,13 @@ export async function initializeOIDCProvider() : Promise<Provider> {
             devInteractions: { enabled: false },
             resourceIndicators: {
                 enabled: true,
-                useGrantedResource(_ctx, _model) {
+                useGrantedResource(_ctx: any, _model: any) {
                     return true;
                 },
-                defaultResource(_ctx, _client) {
+                defaultResource(_ctx: any, _client: any) {
                     return defaultResource; 
                 },
-                getResourceServerInfo(_ctx, resource, _client) {
+                getResourceServerInfo(_ctx: any, resource: string, _client: any) {
                     return {
                         scope: defaultResourceScope,
                         accessTokenFormat: "jwt",
@@ -92,7 +93,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
                     };
                 },
             },
-        },
+        } as any,
         formats: {
             customizers: {
                 jwt: jwt
