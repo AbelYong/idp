@@ -1,7 +1,7 @@
 import argon2 from "argon2"
 import { Request, Response } from "express"
 import { db } from "../drizzle/db.js"
-import { UserRoles, Users, VerificationCodes } from "../drizzle/schema.js"
+import { Roles, UserRoles, Users, VerificationCodes } from "../drizzle/schema.js"
 import { EmailVerificationInput, EmailVerificationRequestInput, RegisterUserInput } from "../schema/auth_schema.js"
 import { IEmailManager, EmailManager } from "../util/mail.js"
 import { AppError, RequestError } from "../util/errors.js"
@@ -11,23 +11,42 @@ import { UserRegisteredMsg } from "../messaging/messages.js"
 
 const emailProvider: IEmailManager = new EmailManager(false);
 
-const defaultRoleName: string = process.env["DEFAULT_ROLE"] || "undefined";
-let defaultRoleId: string = "undefined";
+const defaultRoleName = process.env["DEFAULT_ROLE"]?.trim() || "volunteer";
+let defaultRoleId: string | null = null;
 
 export async function loadDefaultRole(): Promise<void> {
-    const defaultDbRole = await db.query.Roles.findFirst({
+    let defaultDbRole = await db.query.Roles.findFirst({
         where: { name: defaultRoleName }
     });
 
-    if (defaultDbRole) {
-        defaultRoleId = defaultDbRole.id;
-    } else {
-        console.warn(`No role matching for ${defaultRoleName} was found in the database. Registration may fail`);
+    if (!defaultDbRole) {
+        await db.insert(Roles)
+            .values({
+                name: defaultRoleName,
+                description: "Default role assigned during user registration",
+            })
+            .onConflictDoNothing({ target: Roles.name });
+
+        defaultDbRole = await db.query.Roles.findFirst({
+            where: { name: defaultRoleName }
+        });
     }
+
+    if (!defaultDbRole) {
+        throw new Error(`Could not load or create the default role "${defaultRoleName}"`);
+    }
+
+    defaultRoleId = defaultDbRole.id;
+    console.log(`Default registration role loaded: ${defaultRoleName}`);
 }
 
 export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res: Response): Promise<void> => {
     const { email, password, name, parentalSurname, maternalSurname } = req.body;
+    const roleId = defaultRoleId;
+
+    if (!roleId) {
+        throw new Error("The default registration role has not been initialized");
+    }
 
     if (await verifyIsEmailInUse(email)) {
         throw new AppError(409, "This email is already in use");
@@ -40,8 +59,8 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         parallelism: 1
     });
     
-    const newUser = await db.transaction(async () => {
-        const [newUser] = await db.insert(Users).values({
+    const newUser = await db.transaction(async (tx) => {
+        const [newUser] = await tx.insert(Users).values({
             email: email,
             password_hash: hashedPassword,
             isActive: true,
@@ -52,9 +71,9 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
             registratedAt: Users.updatedAt
         });
 
-        await db.insert(UserRoles).values({
+        await tx.insert(UserRoles).values({
             userId: newUser.id,
-            roleId: defaultRoleId
+            roleId
         });
         return newUser;
     });

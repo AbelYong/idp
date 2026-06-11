@@ -3,6 +3,7 @@ import { DrizzleAdapter } from "./drizzle_adapter.js"
 import { findAccount, jwt, loadExistingGrant } from "./provider_configuration.js"
 import { db } from "../drizzle/db.js"
 import { decryptSecret } from "../util/crypto.js"
+import { Clients } from "../drizzle/schema.js"
 
 
 const defaultResource = process.env.DEFAULT_RESOURCE || "";
@@ -13,6 +14,41 @@ const scopes: string[] = defaultScopes.split(",").map(item => item.trim());
 
 let providerInstance: Provider;
 
+async function loadDefaultClient(): Promise<void> {
+    const clientName = process.env.OIDC_CLIENT_ID?.trim() || "gazella-client";
+    const redirectURIs = (
+        process.env.OIDC_CLIENT_REDIRECT_URIS
+        || [
+            "http://localhost:5173/auth/callback",
+            "http://127.0.0.1:5173/auth/callback",
+            "http://localhost:4173/auth/callback",
+            "http://127.0.0.1:4173/auth/callback",
+            "com.gazella.client://auth/callback",
+        ].join(",")
+    )
+        .split(",")
+        .map((uri) => uri.trim())
+        .filter(Boolean);
+
+    await db.insert(Clients)
+        .values({
+            clientName,
+            clientSecret: null,
+            redirectURIs,
+            allowedGrants: ["authorization_code"],
+            isPrivate: false,
+        })
+        .onConflictDoUpdate({
+            target: Clients.clientName,
+            set: {
+                clientSecret: null,
+                redirectURIs,
+                allowedGrants: ["authorization_code"],
+                isPrivate: false,
+            },
+        });
+}
+
 export async function initializeOIDCProvider() : Promise<Provider> {
     const jwks: JWKS = JSON.parse(process.env.OIDC_JWKS || '{"keys": []}');
 
@@ -20,6 +56,7 @@ export async function initializeOIDCProvider() : Promise<Provider> {
         console.warn("Warning: No JWKS were found on the environment");
     }
     
+    await loadDefaultClient();
     const dbClients = await db.query.Clients.findMany();
 
     const mappedClients: ClientMetadata[] = dbClients.map(c => {

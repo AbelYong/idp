@@ -20,6 +20,8 @@ ISSUER_URL=[URL donde esta hosteado el IdP]
 OIDC_JWKS=[JSON Valido]
 DEFAULT_RESOURCE=[Cliente al que otorgar grants automaticos]
 DEFAULT_SCOPES=[scopes, separados por comas]
+OIDC_CLIENT_ID=gazella-client
+OIDC_CLIENT_REDIRECT_URIS=http://localhost:5173/auth/callback,http://127.0.0.1:5173/auth/callback
 IDP_EMAIL_ADDRESS=[direccion de correo para verificacion y recuperacion]
 IDP_EMAIL_PASS=[contraseña del correo]
 ```
