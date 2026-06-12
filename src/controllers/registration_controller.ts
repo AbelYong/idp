@@ -12,37 +12,48 @@ import { UserRegisteredMsg } from "../messaging/messages.js"
 const emailProvider: IEmailManager = new EmailManager(false);
 
 const defaultRoleName = process.env["DEFAULT_ROLE"]?.trim() || "volunteer";
+const allowDevRoleRegistration = process.env["ALLOW_DEV_ROLE_REGISTRATION"] === "true";
 let defaultRoleId: string | null = null;
 
-export async function loadDefaultRole(): Promise<void> {
+async function loadOrCreateRole(roleName: string): Promise<string> {
     let defaultDbRole = await db.query.Roles.findFirst({
-        where: { name: defaultRoleName }
+        where: { name: roleName }
     });
 
     if (!defaultDbRole) {
         await db.insert(Roles)
             .values({
-                name: defaultRoleName,
-                description: "Default role assigned during user registration",
+                name: roleName,
+                description: roleName === defaultRoleName
+                    ? "Default role assigned during user registration"
+                    : "Role available for development and moderation flows",
             })
             .onConflictDoNothing({ target: Roles.name });
 
         defaultDbRole = await db.query.Roles.findFirst({
-            where: { name: defaultRoleName }
+            where: { name: roleName }
         });
     }
 
     if (!defaultDbRole) {
-        throw new Error(`Could not load or create the default role "${defaultRoleName}"`);
+        throw new Error(`Could not load or create role "${roleName}"`);
     }
 
-    defaultRoleId = defaultDbRole.id;
+    return defaultDbRole.id;
+}
+
+export async function loadDefaultRole(): Promise<void> {
+    defaultRoleId = await loadOrCreateRole(defaultRoleName);
+    if (allowDevRoleRegistration) {
+        await loadOrCreateRole("editor");
+    }
     console.log(`Default registration role loaded: ${defaultRoleName}`);
 }
 
 export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res: Response): Promise<void> => {
     const { email, password, name, parentalSurname, maternalSurname } = req.body;
-    const roleId = defaultRoleId;
+    const selectedRoleName = allowDevRoleRegistration && req.body.role ? req.body.role : defaultRoleName;
+    const roleId = selectedRoleName === defaultRoleName ? defaultRoleId : await loadOrCreateRole(selectedRoleName);
 
     if (!roleId) {
         throw new Error("The default registration role has not been initialized");
@@ -87,7 +98,7 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
             name,
             parentalSurname,
             maternalSurname,
-            defaultRoleName,
+            selectedRoleName,
             newUser.registratedAt,
             newUser.id
         );
