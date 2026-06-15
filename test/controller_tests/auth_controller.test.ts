@@ -1,7 +1,7 @@
 import express from "express"
 import request from "supertest"
 import { vi, test, expect } from "vitest"
-import { registerUser } from "../../src/controllers/auth_controller";
+import { registerUser } from "../../src/controllers/registration_controller";
 import { validateRequest } from "../../src/validators/request_validator";
 import { RegisterUserSchema } from "../../src/schema/auth_schema";
 import { asyncHandler } from "../../src/handlers/async_handler";
@@ -29,6 +29,7 @@ vi.mock('../../src/drizzle/db', () => ({
         },
         insert: vi.fn().mockReturnThis(),
         values: vi.fn().mockReturnThis(),
+        transaction: vi.fn().mockReturnThis(),
         returning: mockReturning,
     }
 }));
@@ -48,7 +49,8 @@ app.use(globalErrorHandler);
 test("Valid registration request returns 201 and new user", async () => {
     const validPayload = {
         email: "test@example.com",
-        password: "Valid_Pass123"
+        password: "Valid_Pass123",
+        name: "test"
     };
 
     mockFindFirst.mockResolvedValueOnce(undefined);
@@ -65,7 +67,8 @@ test("Valid registration request returns 201 and new user", async () => {
 test("Valid registration email already in use returns 409 does not call database", async () => {
     const validPayload = {
         email: "test@example.com",
-        password: "Valid_Pass123"
+        password: "Valid_Pass123",
+        name: "test"
     };
 
     mockFindFirst.mockResolvedValueOnce([{ id: 'existing_uuid', email: validPayload.email }]);
@@ -81,7 +84,8 @@ test("Valid registration email already in use returns 409 does not call database
 test("Invalid registration password wrong format, returns 400 does not query for email", async () => {
     const invalidPayload = {
         email: "test@example",
-        password: "invalidpass"
+        password: "invalidpass",
+        name: "test"
     };
 
     const response = await request(app)
@@ -95,7 +99,8 @@ test("Invalid registration password wrong format, returns 400 does not query for
 test("Database error during registration returns 500", async () => {
     const validPayload = {
         email: "test@example.com",
-        password: "Valid_Pass123"
+        password: "Valid_Pass123",
+        name: "test"
     };
 
     mockFindFirst.mockRejectedValueOnce(new Error("Database disconnected"));
