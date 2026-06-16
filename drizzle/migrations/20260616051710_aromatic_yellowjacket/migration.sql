@@ -24,6 +24,28 @@ CREATE TABLE "oidc_models" (
 	"consumed_at" timestamp
 );
 --> statement-breakpoint
+CREATE TABLE "pending_registrations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"email" varchar(128) NOT NULL UNIQUE,
+	"password_hash" varchar NOT NULL,
+	"name" varchar(128) NOT NULL,
+	"paternal_surname" varchar(128),
+	"maternal_surname" varchar(128),
+	"role" varchar(64) NOT NULL,
+	"code" varchar(6) NOT NULL,
+	"remaining_attempts" integer NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "recovery_codes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"code" varchar(6),
+	"remaining_attempts" integer NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"user_id" uuid NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "role_claims" (
 	"role_id" uuid,
 	"claim_id" uuid,
@@ -46,13 +68,25 @@ CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"email" varchar(128) NOT NULL,
 	"password_hash" varchar NOT NULL,
+	"is_verified" boolean DEFAULT false NOT NULL,
 	"is_active" boolean DEFAULT false NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "verification_codes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"code" varchar(6) NOT NULL,
+	"remaining_attempts" integer NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"user_id" uuid NOT NULL
+);
+--> statement-breakpoint
 CREATE UNIQUE INDEX "type_value_unqIdx" ON "claims" ("type","value");--> statement-breakpoint
+CREATE UNIQUE INDEX "pending_email_unqIdx" ON "pending_registrations" ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX "email_unqIdx" ON "users" ("email");--> statement-breakpoint
+ALTER TABLE "recovery_codes" ADD CONSTRAINT "recovery_codes_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id");--> statement-breakpoint
 ALTER TABLE "role_claims" ADD CONSTRAINT "role_claims_role_id_roles_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id");--> statement-breakpoint
 ALTER TABLE "role_claims" ADD CONSTRAINT "role_claims_claim_id_claims_id_fkey" FOREIGN KEY ("claim_id") REFERENCES "claims"("id");--> statement-breakpoint
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id");--> statement-breakpoint
-ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_roles_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id");
+ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_roles_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id");--> statement-breakpoint
+ALTER TABLE "verification_codes" ADD CONSTRAINT "verification_codes_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id");

@@ -24,6 +24,24 @@ export const VerificationCodes = pgTable(
     }
 );
 
+export const PendingRegistrations = pgTable(
+    "pending_registrations", {
+        id: pg.uuid("id").primaryKey().defaultRandom(),
+        email: pg.varchar("email", { length: 128 }).notNull().unique(),
+        password_hash: pg.varchar("password_hash").notNull(),
+        name: pg.varchar("name", { length: 128 }).notNull(),
+        parentalSurname: pg.varchar("paternal_surname", { length: 128 }),
+        maternalSurname: pg.varchar("maternal_surname", { length: 128 }),
+        role: pg.varchar("role", { length: 64 }).notNull(),
+        code: pg.varchar("code", { length: 6 }).notNull(),
+        remainingAttempts: pg.integer("remaining_attempts").notNull(),
+        expiresAt: pg.timestamp("expires_at").notNull(),
+        createdAt: pg.timestamp("created_at").notNull().defaultNow()
+    }, (table) => [
+        pg.uniqueIndex("pending_email_unqIdx").on(table.email)
+    ]
+);
+
 export const RecoveryCodes = pgTable(
     "recovery_codes", {
         id: pg.uuid("id").primaryKey().defaultRandom(),

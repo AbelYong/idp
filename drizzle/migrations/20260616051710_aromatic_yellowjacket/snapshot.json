@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "eea47874-4f26-495f-982c-9967968e4191",
+  "id": "6377e19a-99b9-436c-8c7f-5f2bf362a8ab",
   "prevIds": [
-    "5997e0b2-60ef-4873-ab71-ba69c69a8b73"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
@@ -21,6 +21,12 @@
     {
       "isRlsEnabled": false,
       "name": "oidc_models",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "pending_registrations",
       "entityType": "tables",
       "schema": "public"
     },
@@ -280,6 +286,149 @@
       "entityType": "columns",
       "schema": "public",
       "table": "oidc_models"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "password_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paternal_surname",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "maternal_surname",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "role",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "varchar(6)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "remaining_attempts",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pending_registrations"
     },
     {
       "type": "uuid",
@@ -624,6 +773,27 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
+      "name": "pending_email_unqIdx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "pending_registrations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
       "name": "email_unqIdx",
       "entityType": "indexes",
       "schema": "public",
@@ -788,6 +958,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "pending_registrations_pkey",
+      "schema": "public",
+      "table": "pending_registrations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "recovery_codes_pkey",
       "schema": "public",
       "table": "recovery_codes",
@@ -832,6 +1012,17 @@
       "name": "clients_client_name_key",
       "schema": "public",
       "table": "clients",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "email"
+      ],
+      "nullsNotDistinct": false,
+      "name": "pending_registrations_email_key",
+      "schema": "public",
+      "table": "pending_registrations",
       "entityType": "uniques"
     },
     {
