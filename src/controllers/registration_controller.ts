@@ -106,7 +106,7 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
 
         await tx.insert(UserRoles).values({
             userId: newUser.id,
-            roleId
+            roleId: roleId
         });
         return newUser;
     });
