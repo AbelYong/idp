@@ -9,6 +9,7 @@ import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
 import { rabbitMQService } from "./messaging/rabbitmq.js";
 import dotenv from 'dotenv';
+import { seed } from "./drizzle/seed.js";
 
 dotenv.config();
 
@@ -24,15 +25,19 @@ async function startServer() {
             console.error('OIDC Server Error:', err);
         });
 
-        app.use('/oidc', provider.callback());
-
         app.use(express.json());
+
+        await loadDefaultRole();
+
+        if (process.env["NODE_ENV"] === "test") {
+            await seed();
+        }
+
+        app.use('/oidc', provider.callback());
 
         app.get("/api", (res: Response) => {
             res.json({ mensaje: "IdP is listening" });
         });
-
-        await loadDefaultRole();
 
         app.get("/api/auth/interaction/:uid", asyncHandler(getInteractionDetails));
         app.post("/api/auth/interaction/:uid/login", validateRequest(LoginUserSchema), asyncHandler(login));
