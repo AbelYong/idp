@@ -116,6 +116,6 @@ export async function seed() {
         code: "123456",
         remainingAttempts: 3,
         expiresAt: oneMonthPlus,
-        userId: unverifiedUserId
+        userId: forgottenPasswordUserId
     });
 }
