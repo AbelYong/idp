@@ -60,6 +60,9 @@ export async function seed() {
         );
     }
 
+    await db.delete(VerificationCodes);
+    await db.delete(RecoveryCodes);
+
     const unverifiedUserId = "b8b46004-9a34-4974-8692-b102ac5c0fdd";
     const unverifiedUser = await db.query.Users.findFirst({
         where: { id: unverifiedUserId }
