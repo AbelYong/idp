@@ -23,9 +23,10 @@ async function loadOrCreateRole(roleName: string): Promise<string> {
     if (!defaultDbRole) {
         await db.insert(Roles)
             .values({
+                id: "6438b39e-24fc-415f-a8c9-823a064a1d58",
                 name: roleName,
                 description: roleName === defaultRoleName
-                    ? "Default role assigned during user registration"
+                    ? "Can write and read articles, follow other users, and join active projects"
                     : "Role available for development and moderation flows",
             })
             .onConflictDoNothing({ target: Roles.name });
@@ -44,9 +45,6 @@ async function loadOrCreateRole(roleName: string): Promise<string> {
 
 export async function loadDefaultRole(): Promise<void> {
     defaultRoleId = await loadOrCreateRole(defaultRoleName);
-    if (allowDevRoleRegistration) {
-        await loadOrCreateRole("editor");
-    }
     console.log(`Default registration role loaded: ${defaultRoleName}`);
 }
 
@@ -54,7 +52,6 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
     const { email, password, name, parentalSurname, maternalSurname } = req.body;
     const selectedRoleName = allowDevRoleRegistration && req.body.role ? req.body.role : defaultRoleName;
 
-    // Check if email is already in use by an actual account
     const existingUser = await db.query.Users.findFirst({
         where: { email: email }
     });
@@ -70,21 +67,17 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         parallelism: 1
     });
 
-    // Import generateSecureOTP
     const { generateSecureOTP } = await import("../util/crypto.js");
     const code = generateSecureOTP();
     const expirationTime = new Date(Date.now());
     expirationTime.setMinutes(expirationTime.getMinutes() + 15);
 
-    // Check if there's an existing pending registration
     const existingPending = await db.query.PendingRegistrations.findFirst({
         where: { email: email }
     });
 
-    // Save to PendingRegistrations (update if exists, insert if new)
     try {
         if (existingPending) {
-            // Update existing pending registration with new data and new code
             await db.update(PendingRegistrations)
                 .set({
                     password_hash: hashedPassword,
@@ -98,7 +91,6 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
                 })
                 .where(eq(PendingRegistrations.email, email));
         } else {
-            // Insert new pending registration
             await db.insert(PendingRegistrations).values({
                 email,
                 password_hash: hashedPassword,
@@ -115,7 +107,6 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         throw new AppError(409, "An error occurred during registration, please try again later");
     }
 
-    // Send verification email directly (without using emailProvider which looks for Users)
     try {
         const nodemailer = await import("nodemailer");
         const transporter = nodemailer.default.createTransport({
@@ -147,7 +138,6 @@ export const registerUser = async (req: Request<{}, {}, RegisterUserInput>, res:
         console.log(`Verification code successfully sent to: ${email}: ${info.messageId}`);
         res.status(201).json({ message: "Please check your email and verify your code to complete registration" });
     } catch (error) {
-        // Clean up pending registration if email fails
         await db.delete(PendingRegistrations).where(eq(PendingRegistrations.email, email));
         console.error("Failed to send verification email:", error);
         res.status(503).json({ message: "We failed to send you a verification email, try again later", code: "EMAIL_NOT_SENT" });
@@ -168,13 +158,11 @@ async function verifyIsEmailInUse(email: string) : Promise<boolean> {
 export const requestEmailVerification = async (req: Request<{}, {}, EmailVerificationRequestInput>, res: Response) : Promise<void> => {
     const { email } = req.body;
 
-    // Check if it's a pending registration
     const pendingRegistration = await db.query.PendingRegistrations.findFirst({
         where: { email: email }
     });
 
     if (pendingRegistration) {
-        // Generate new code for pending registration
         const { generateSecureOTP } = await import("../util/crypto.js");
         const code = generateSecureOTP();
         const expirationTime = new Date(Date.now());
@@ -190,7 +178,6 @@ export const requestEmailVerification = async (req: Request<{}, {}, EmailVerific
             return;
         }
 
-        // Send the email
         try {
             const mailOptions = {
                 from: '"Gazella" <gazella.noreply@gmail.com>',
@@ -220,7 +207,6 @@ export const requestEmailVerification = async (req: Request<{}, {}, EmailVerific
             await transporter.sendMail(mailOptions);
             res.status(201).json({message: "Your verification email has been sent"});
         } catch (error) {
-            // Revert the code
             await db.update(PendingRegistrations)
                 .set({ code: pendingRegistration.code, expiresAt: pendingRegistration.expiresAt, remainingAttempts: pendingRegistration.remainingAttempts })
                 .where(eq(PendingRegistrations.email, email));
@@ -231,7 +217,6 @@ export const requestEmailVerification = async (req: Request<{}, {}, EmailVerific
         return;
     }
 
-    // Otherwise, try to send to existing user
     const success = await emailProvider.sendVerificationCode(email);
 
     if (success) {
@@ -244,16 +229,13 @@ export const requestEmailVerification = async (req: Request<{}, {}, EmailVerific
 export const verifyEmail = async (req: Request<{}, {}, EmailVerificationInput>, res: Response) : Promise<void> => {
     const { email, code } = req.body;
 
-    // First, check if this is a pending registration
     const pendingRegistration = await db.query.PendingRegistrations.findFirst({
         where: { email: email }
     });
 
     if (pendingRegistration) {
-        // Handle pending registration verification
         const now = new Date(Date.now());
         if (now > pendingRegistration.expiresAt) {
-            // Delete expired pending registration
             await db.delete(PendingRegistrations).where(eq(PendingRegistrations.email, email));
             throw new RequestError(
                 401,
@@ -271,32 +253,27 @@ export const verifyEmail = async (req: Request<{}, {}, EmailVerificationInput>, 
         }
 
         if (pendingRegistration.code === code) {
-            // Code is correct, create the user account
             const roleId = await loadOrCreateRole(pendingRegistration.role);
             
             await db.transaction(async (tx) => {
-                // Create user
                 const [newUser] = await tx.insert(Users).values({
                     email: pendingRegistration.email,
                     password_hash: pendingRegistration.password_hash,
                     isActive: true,
-                    isVerified: true, // Set to verified immediately
+                    isVerified: true,
                 }).returning({
                     id: Users.id,
                     email: Users.email,
                     updatedAt: Users.updatedAt
                 });
 
-                // Assign role
                 await tx.insert(UserRoles).values({
                     userId: newUser.id,
                     roleId
                 });
 
-                // Delete pending registration
                 await tx.delete(PendingRegistrations).where(eq(PendingRegistrations.email, email));
 
-                // Publish event
                 const message = new UserRegisteredMsg(
                     pendingRegistration.email,
                     pendingRegistration.name,
@@ -311,7 +288,6 @@ export const verifyEmail = async (req: Request<{}, {}, EmailVerificationInput>, 
 
             res.status(200).json({message: "Your account has been successfully created and verified"});
         } else {
-            // Code is incorrect
             await db.update(PendingRegistrations)
                 .set({ remainingAttempts: pendingRegistration.remainingAttempts - 1})
                 .where(eq(PendingRegistrations.email, email));
@@ -325,13 +301,11 @@ export const verifyEmail = async (req: Request<{}, {}, EmailVerificationInput>, 
         return;
     }
 
-    // Otherwise, handle existing user verification
     const user = await db.query.Users.findFirst({
         where: { email: email }
     });
 
     if (!user) {
-        // Mitigate enumeration
         throw new AppError(404, "No verification code was found for the requested address, please double check the spelling and try again.");
     }
 

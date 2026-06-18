@@ -19,11 +19,7 @@ async function loadDefaultClient(): Promise<void> {
     const redirectURIs = (
         process.env.OIDC_CLIENT_REDIRECT_URIS
         || [
-            "http://localhost:5173/auth/callback",
-            "http://127.0.0.1:5173/auth/callback",
-            "http://localhost:4173/auth/callback",
-            "http://127.0.0.1:4173/auth/callback",
-            "com.gazella.client://auth/callback",
+            "com.gazella.client://callback",
         ].join(",")
     )
         .split(",")
