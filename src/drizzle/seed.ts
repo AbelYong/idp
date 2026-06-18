@@ -1,7 +1,7 @@
 import argon2 from "argon2"
 import { db } from "./db.js";
 import { RecoveryCodes, Roles, UserRoles, Users, VerificationCodes } from "./schema.js";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 
 export async function seed() {
     console.log("[SEED] Sedding users...");
@@ -60,8 +60,12 @@ export async function seed() {
         );
     }
 
-    await db.delete(VerificationCodes);
-    await db.delete(RecoveryCodes);
+    await db.delete(VerificationCodes).where(
+        isNotNull(VerificationCodes.userId)
+    );
+    await db.delete(RecoveryCodes).where(
+        isNotNull(RecoveryCodes.userId)
+    );
 
     const unverifiedUserId = "b8b46004-9a34-4974-8692-b102ac5c0fdd";
     const unverifiedUser = await db.query.Users.findFirst({
