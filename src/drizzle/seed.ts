@@ -72,7 +72,7 @@ export async function seed() {
     }
 
     await db.insert(Users).values({
-        id: testUserId,
+        id: unverifiedUserId,
         email: "unverified@test.com",
         password_hash: hashedPassword,
         isVerified: false,
