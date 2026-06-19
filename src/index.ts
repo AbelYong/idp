@@ -9,7 +9,6 @@ import { validateRequest } from "./validators/request_validator.js";
 import { initializeOIDCProvider } from "./oidc/provider.js"
 import { rabbitMQService } from "./messaging/rabbitmq.js";
 import dotenv from 'dotenv';
-import { seed } from "./drizzle/seed.js";
 
 dotenv.config();
 
@@ -28,10 +27,6 @@ async function startServer() {
         app.use(express.json());
 
         await loadDefaultRole();
-
-        if (process.env["NODE_ENV"] === "test") {
-            await seed();
-        }
 
         app.use('/oidc', provider.callback());
 
